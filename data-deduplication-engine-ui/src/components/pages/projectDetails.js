@@ -5,7 +5,7 @@ import Footer from "../common/footer";
 import Header from "../common/header";
 import LoadingSpinner from "../common/loadingSpinner";
 import { BsFillCloudDownloadFill, BsUpload, BsList, BsPencilSquare, BsFillTrashFill } from "react-icons/bs";
-import { projects_api, get_project_files_api, file_download, delete_project_api, trained_data_api, active_learning_api, existing_project_training_data_api,delete_project_file_api } from '../constants/endpoints'
+import { projects_api, get_project_files_api, file_download, delete_project_api, trained_data_api, active_learning_api, existing_project_training_data_api, delete_project_file_api } from '../constants/endpoints'
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
@@ -16,6 +16,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { upload_project_file_api } from '../constants/endpoints'
+import DefaultError from "../ErrorPages/Error";
 
 export default function ProjectDetailsPage() {
     const [projectData, setProjectData] = useState([])
@@ -24,9 +25,14 @@ export default function ProjectDetailsPage() {
     const [showDialogForm, setShowDialogForm] = useState(false)
     const [showDialogSuccess, setShowDialogSuccess] = useState(false)
     const [open, setOpen] = useState(true)
-    const [payload, setPayload] = useState({})
+    const [payload, setPayload] = useState({"link_project":''})
     const [isChecked, setIsChecked] = useState(false)
+    const [isLinkChecked, setIsLinkChecked] = useState(false)
+    const [isError ,setIsError] = useState(false)
     const theme = useTheme();
+    const [loading, setLoading] = useState(false)
+    const [isButtonDisable, setIsButtonDisable] = useState(true)
+    const [errorMessage, setErrorMessage] = useState('')
 
     const fullScreen = useMediaQuery(theme.breakpoints.down('md'));
     const url_id = window.location.pathname.split("/")
@@ -75,34 +81,60 @@ export default function ProjectDetailsPage() {
         setShowDialogForm(true)
     }
     const handleFileChange = (e) => {
+        setIsButtonDisable(false)
         setPayload({ "file_name": e.target.files[0].name, "project": project_id, "uploaded_file": e.target.files[0] })
+        console.log(payload)
+
 
     }
     const handleSubmit = () => {
-        axios.post(
-            upload_project_file_api,
-            payload,
-            {
-                headers: {
-                    "Content-type": "multipart/form-data",
-                },
-            }
-        ).then(res => {
-            setShowDialogForm(false)
-            if (isChecked) {
-                let payload = { "project_id": project_id, "project_setting_file": project_id, "is_file": project_id.toString() + '_' + res.data.id.toString() }
-                axios.post(
-                    existing_project_training_data_api,
-                    payload
-                ).then(res => {
-                    setShowDialogSuccess(true)
-                    console.log(res)
-                })
+        console.log(payload)
+        setIsButtonDisable(true)
+        setLoading(true)
 
-            }
-        }).catch(err => {
-            console.log(err)
-        })
+        if (isLinkChecked) { 
+            axios.post(
+
+            ).then(res=>{
+                console.log(res)
+            }).catch(err=>{
+                setIsError(true)
+            })
+        }
+        else {
+            axios.post(
+                upload_project_file_api,
+                payload,
+                {
+                    headers: {
+                        "Content-type": "multipart/form-data",
+                    },
+                }
+            ).then(res => {
+               
+                if (isChecked) {
+                    let payload = { "project_id": project_id, "project_setting_file": project_id, "is_file": project_id.toString() + '_' + res.data.id.toString() }
+                    axios.post(
+                        existing_project_training_data_api,
+                        payload
+                    ).then(res => {
+                        setShowDialogForm(false)
+                        setShowDialogSuccess(true)
+                        console.log(res)
+                    }).catch(err=>{
+                        setErrorMessage('Error... Caused by training file')
+                        setIsError(true)
+                        setShowDialogForm(false)
+                    })
+
+                }
+            }).catch(err => {
+                console.log(err)
+                setIsError(true)
+                setShowDialogForm(false)
+
+            })
+        }
     }
     const FileDownload = require('js-file-download');
     const onClickDownload = (e) => {
@@ -149,6 +181,10 @@ export default function ProjectDetailsPage() {
     }
     const onClickDashboard = () => {
         window.location.pathname = `/project-details-page/${project_id}`
+    }
+    const handleChange = (e) => {
+        payload["link_project"]= e.target.value
+
     }
     const onClickEdit = (e) => {
         let payload = { "id": e.id }
@@ -223,15 +259,41 @@ export default function ProjectDetailsPage() {
 
                                         </div>
                                         <div className="radio">
+                                            <input type="checkbox" checked={isLinkChecked} onChange={(e) => setIsLinkChecked(e.target.checked)} />
+                                            &nbsp; Record Linkage
+                                            {isLinkChecked && (
+                                                <select id="project-list" className="form-control" name='link_project' style={{ width: "100%" }} onChange={(e) => handleChange(e)}>
+                                                    <option>--select a project to be linked--</option>
+
+                                                    {
+                                                        projectData.length > 0 && projectData.map((opt, i) => (
+                                                            <option key={opt.id} value={opt.id}>
+                                                                {opt.project_name}
+
+                                                            </option>
+                                                        ))
+                                                    }
+                                                </select>)}
+                                        </div>
+                                        {/* <div className="radio">
                                             <input type="checkbox" checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />
 
                                             &nbsp; merge file
 
-                                        </div>
+                                        </div> */}
                                     </DialogContent>
                                     <DialogActions>
                                         {/* <button className="btn btn-info" onClick={handleClose}>Cancel</button> */}
-                                        <button className="btn btn-info" onClick={handleSubmit}>Submit</button>
+                                        <button className="btn btn-info" onClick={handleSubmit} disabled={isButtonDisable}>
+                                        {loading && (
+                                    <i
+                                        className="fa fa-refresh fa-spin"
+                                        style={{ marginRight: "5px" }}
+                                    />
+                                )}
+                                {loading && <span>Loading...</span>}
+                                {!loading && <span>Submit</span>}
+                                        </button>
                                     </DialogActions>
                                 </Dialog>
                             </div>
@@ -274,7 +336,7 @@ export default function ProjectDetailsPage() {
                                                 <tr key={item.id}>
                                                     <td className="width-40">{item.file_name}</td>
                                                     <td className="width-30">{item.updated_at}</td>
-                                                    <td className="width-10"><button className="button-bor"><a className="btn btn-warning">Re-Train Dataset &nbsp;<BsPencilSquare /></a></button></td>
+                                                    <td className="width-10"></td>
                                                     <td className="width-10"><button className="btn btn-info" onClick={() => onClickDownload(item)}><a className="download-btn">Download</a>&nbsp;<BsFillCloudDownloadFill /></button></td>
                                                     <td className="width-5"><button type="button" className="btn btn-danger delete-btn" onClick={() => onClickDelete(item)}><a className="download-btn"><BsFillTrashFill /></a></button></td>
 
@@ -310,6 +372,13 @@ export default function ProjectDetailsPage() {
                                 </Button>
                             </DialogActions>
                         </Dialog>
+                    )
+                }
+                {
+                    isError && (
+                        <div>
+                            <DefaultError data={errorMessage}/>
+                        </div>
                     )
                 }
             </div>

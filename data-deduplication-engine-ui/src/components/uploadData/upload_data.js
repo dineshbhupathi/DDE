@@ -13,6 +13,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import { Stack, width } from '@mui/system';
+import { IconButton, Snackbar } from '@mui/material';
+import CloseIcon from '@mui/material/IconButton';
+import DefaultError from '../ErrorPages/Error';
 
 class UploadData extends React.Component {
     constructor(props) {
@@ -29,7 +33,10 @@ class UploadData extends React.Component {
             isChecked: false,
             project_setting_file: null,
             showDialog: false,
-            open: true
+            open: true,
+            isSnack: false,
+            snackOpen: false,
+            messageError: ''
 
 
         };
@@ -52,7 +59,24 @@ class UploadData extends React.Component {
         })
 
     }
-
+    handleSnackClose = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        this.setState({ isSnack: false })
+    }
+    action = (
+        <React.Fragment>
+            <IconButton
+                size='large'
+                aria-label='close'
+                color='inherit'
+                onClick={this.handleSnackClose}
+            >
+                <CloseIcon fontsize="large" />
+            </IconButton>
+        </React.Fragment>
+    )
     handleFilePreview = (e) => {
         this.state.uploaded_file = e.target.files[0];
         if (this.state.uploaded_file) {
@@ -88,7 +112,7 @@ class UploadData extends React.Component {
         delete postData['projectData']
         delete postData['errorMessage']
         delete postData['showButton']
-
+        document.getElementById("upload_form").reset();
         axios.post(
             project_api,
             postData,
@@ -99,6 +123,7 @@ class UploadData extends React.Component {
             }
 
         ).then(res => {
+           
             if (this.state.project_setting_file) {
                 let payload = { "project_id": res.data.id, "project_setting_file": this.state.project_setting_file }
                 axios.post(
@@ -108,6 +133,7 @@ class UploadData extends React.Component {
                     this.setState({
                         showDialog: true
                     })
+                    
                 })
             }
             else {
@@ -119,8 +145,20 @@ class UploadData extends React.Component {
                 }
             }
         }).catch(err => {
-            this.setState({ errorMessage: err.message });
-            console.log(err)
+            if (err.response.status == 404) {
+                this.setState({ messageError: 'Id Column is Not Present in the file' }, () => {
+
+                })
+            }
+            this.setState({ isSnack: true }, () => {
+
+            })
+            this.setState({ snackOpen: true }, () => {
+
+            })
+
+            // this.setState({ errorMessage: err.message });
+            // console.log(err)
         })
     };
     onClickDashboard = () => {
@@ -154,7 +192,7 @@ class UploadData extends React.Component {
                         <div className="row">
                             <div className="col-md-7">
                                 <div className=''>
-                                    <form role="form" className='form-horizontal' onSubmit={this.handleSubmit}>
+                                    <form role="form" className='form-horizontal' id='upload_form' onSubmit={this.handleSubmit}>
                                         <input type="hidden" name="csrf_token" value="IjIwMDA1YTExMDBhYTk4N2U1NDQzNjM5ZDk2ODEwNmMxMjc2NWU3MTUi.Yy24-w.pGOyTx00NLNxBfF_BedS7lCzWGs" />
 
 
@@ -220,7 +258,7 @@ class UploadData extends React.Component {
                                                                 {
                                                                     this.state.isChecked && (
                                                                         <select id="project-list" className="form-control" name='project_setting_file' style={{ width: "100%" }} onChange={this.handleInput}>
-                                                                            <option>--select a project to be linked--</option>
+                                                                            <option>--select a project trainging file--</option>
 
                                                                             {
                                                                                 this.state.projectData.length > 0 && this.state.projectData.map((opt, i) => (
@@ -241,7 +279,7 @@ class UploadData extends React.Component {
                                                         <p>Upload your file to an <strong>existing project</strong> that has already been deduped.</p>
                                                         <br />
                                                         <select id="project-list" className="form-control" name='link_project' style={{ width: "100%" }} onChange={this.handleInput}>
-                                                            <option>--select a project to be linked</option>
+                                                            <option>--select a project to be linked--</option>
 
                                                             {
                                                                 this.state.projectData.length > 0 && this.state.projectData.map((opt, i) => (
@@ -291,6 +329,26 @@ class UploadData extends React.Component {
 
                                         </div>
                                     </form>
+                                    {this.state.isSnack && (
+                                        // <div>
+                                        //     <Stack spacing={2} sx={{ maxWidth: 500 }}>
+                                        //         <Snackbar
+                                        //             open={this.state.snackOpen}
+                                        //             ContentProps={{
+                                        //                 sx: {
+                                        //                     background: "red",
+                                        //                     width: "100%"
+                                        //                 }
+                                        //             }}
+                                        //             autoHideDuration={6000}
+                                        //             onClose={this.handleSnackClose}
+                                        //             message=" Id Column is Not Present in the file"
+                                        //             action={this.action}
+                                        //         />
+                                        //     </Stack>
+                                        // </div>
+                                        <DefaultError data={this.state.messageError} />
+                                    )}
                                 </div>
                             </div>
                             <div className="col-sm-5">

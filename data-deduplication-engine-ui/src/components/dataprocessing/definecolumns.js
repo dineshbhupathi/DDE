@@ -7,6 +7,9 @@ import { active_learning_link_api, active_learning_api, read_csv_api } from '../
 import TrainModel from "./train-model";
 import Footer from "../common/footer";
 import Header from "../common/header";
+import { Snackbar } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function DefineColumns() {
     let [formRows, setFormRows] = useState({
@@ -17,6 +20,9 @@ export default function DefineColumns() {
     const [activeData, setActiveData] = useState([])
     const [isPostedData, setIsPostedData] = useState(false)
     const [projectData, fetchProjectData] = useState([])
+    const [nextButtonEnable, setNextButtonEnable] = React.useState(true)
+    const [isSnack, setIsSnack] = React.useState(false)
+    const [snackOpen, setSnackOpen] = React.useState(true)
     console.log(activeData, 'ls')
 
 
@@ -90,7 +96,9 @@ export default function DefineColumns() {
         let updatedRowData = { ...rows[rowIndex], [name]: value }
         rows[rowIndex] = updatedRowData
         setFormRows({ check_columns: [...rows] })
-
+        if (formRows.check_columns[0]['field']!='' && formRows.check_columns[0]['type']!=''){
+            setNextButtonEnable(false)
+        }
 
     }
 
@@ -102,6 +110,31 @@ export default function DefineColumns() {
             fetchProjectData(res.project)
         })
     }
+    const handleDeleteRow = (e) =>{
+        var array = formRows.check_columns
+        delete array[e.target.id]
+        const filteredArray = array.filter(item=> item != 'undefined')
+        setFormRows({check_columns: [...filteredArray]})
+    }
+
+    const handleSnackClose = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+        setIsSnack(false)
+    }
+   const action = (
+        <React.Fragment>
+            <IconButton
+                size='large'
+                aria-label='close'
+                color='inherit'
+                onClick={handleSnackClose}
+            >
+                <CloseIcon fontsize="large" />
+            </IconButton>
+        </React.Fragment>
+    )
 
     useEffect(() => {
         getData()
@@ -136,7 +169,7 @@ export default function DefineColumns() {
                                 <div id="field_wrapper">
                                     {
                                         formRows.check_columns.map((elementInArray, index) => (
-                                            <FieldComponent key={index} rowIndex={index} handleChange={handleFormData} />
+                                            <FieldComponent key={index} rowIndex={index} handleChange={handleFormData} handleDelete={handleDeleteRow} />
                                         ))
                                     }
                                 </div>
@@ -146,7 +179,7 @@ export default function DefineColumns() {
                                     </button>
                                 </p>
                                 <div className='clearfix'></div>
-                                <button className="btn btn-info pull-right" id="next">
+                                <button className="btn btn-info pull-right" id="next" disabled={nextButtonEnable}>
                                     Next »
                                 </button>
                             </form>
@@ -157,6 +190,20 @@ export default function DefineColumns() {
                 <div>
                     <TrainModel data={activeData} />
                 </div>
+            }
+            {
+                isSnack && (
+                    <div>
+                        <Snackbar 
+                        open={snackOpen}
+                        autoHideDuration={6000}
+                        onClose={handleSnackClose}
+                        message="Error Occured"
+                        action={action}
+                        
+                        />
+                    </div>
+                )
             }
         </div>
     )

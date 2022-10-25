@@ -814,3 +814,51 @@ a.card-content:link, a.card-content:hover, a.card-content:active, a.card-content
     display: inline-block;
     vertical-align: top;
 }
+
+.blink-text{
+  animation: blinkingText 0.8s infinite;
+}
+@keyframes blinkingText {
+  10%{ color: red;}
+  40%{ color: orange;}
+  90%{ color: transparent;}
+  100%{ color: green;}
+}
+
+/* search button */
+.search{
+  position: relative;  
+  }
+
+  .search input{
+
+   height: 35px;
+   text-indent: 25px;
+  }
+
+
+  .search input:focus{
+
+   box-shadow: none;
+
+
+  }
+
+  .search .fa-search{
+
+   position: absolute;
+   top: 20px;
+   left: 16px;
+
+  }
+
+  .search button{
+
+   position: absolute;
+   top: 1px;
+   right: 0px;
+   height: 34px;
+   width: 110px;
+   background: #002c5f;
+
+  }

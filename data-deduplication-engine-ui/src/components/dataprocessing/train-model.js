@@ -10,6 +10,7 @@ import '../css/dataTables.bootstrap.css';
 import '../css/select2.min.css';
 import Footer from "../common/footer";
 import Header from "../common/header";
+import DefaultError from "../ErrorPages/Error";
 // import Snackbar from '@mui/material';
 // import MuiAllert from '@mui/material';
 
@@ -299,6 +300,11 @@ export default function TrainModel(props) {
                                             </div>
                                         </div> */}
                                     </div>
+                                    {isOpenError && (
+                                        <div>
+                                            <DefaultError />
+                                        </div>
+                                    )}
                                 </div>
                             </div></React.Fragment> :
                             <div>

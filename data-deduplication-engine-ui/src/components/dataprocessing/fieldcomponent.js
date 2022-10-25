@@ -3,13 +3,14 @@ import axios from "axios";
 import statelogo from '../static/images/logo.png';
 import { useActionData } from "react-router-dom";
 import { read_csv_api, projet_data_check_api } from '../constants/endpoints'
+import { BsFillTrashFill } from "react-icons/bs";
 
 export default function FieldComponent(props) {
     const [Columns, fetchColumns] = useState([])
     const [projectData, fetchProjetData] = useState([])
     const [isCompareData, setIsCompareData] = useState(false)
     const [childColumns, fetchChildColumns] = useState([])
-    const { handleChange, rowIndex, } = props
+    const {handleChange,rowIndex,  handleDelete } = props
 
     const url_id = window.location.pathname.split("/")
     const project_id = url_id[2]
@@ -86,61 +87,90 @@ export default function FieldComponent(props) {
                             </div>
                         </div>
                     </div>
+                    <div className="col-sm-2">
+                        <div className="form-group">
+                            <div className="input-group new_field_fields">
+                                {
+                                    rowIndex > 0 && (
+                                        <button className="btn btn-danger" id={rowIndex} onClick={(e) => handleDelete(e)}>
+                                            <BsFillTrashFill />
+
+                                        </button>
+                                    )
+                                }
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </React.Fragment> : <div className="row">
+                <div className="col-sm-4">
+                    <div className="form-group">
+                        <label>Column in <strong>{projectData.project_name}</strong></label>
+                        <div className="input-group new_field_fields">
+                            <select className="form-control new_field" name="field" onChange={(e) => handleChange(e, rowIndex)}>
+                                <option>--select a column--</option>
+                                {Columns && Columns.length && Columns.map((opt, i) => (
+                                    <option key={opt} value={opt}>
+                                        {opt}
+                                    </option>
+                                ))}
+
+                            </select>
+
+                        </div>
+                    </div>
 
                 </div>
-            </React.Fragment> :  <div className="row">
-                    <div className="col-sm-4">
-                        <div className="form-group">
-                            <label>Column in <strong>{projectData.project_name}</strong></label>
-                            <div className="input-group new_field_fields">
-                                <select className="form-control new_field" name="field" onChange={(e) => handleChange(e, rowIndex)}>
-                                    <option>--select a column--</option>
-                                    {Columns && Columns.length && Columns.map((opt, i) => (
-                                        <option key={opt} value={opt}>
-                                            {opt}
-                                        </option>
-                                    ))}
-
-                                </select>
-
-                            </div>
-                        </div>
-
-                    </div>
-                    <div className="col-sm-3">
+                <div className="col-sm-3">
                     <div className="form-group">
-                            <label>Select Same Column in <strong>{projectData.link_project}</strong></label>
-                            <div className="input-group new_field_fields">
-                                <select className="form-control new_field" name="field2" onChange={(e) => handleChange(e, rowIndex)}>
-                                    <option>--select a column--</option>
-                                    {Columns && Columns.length && Columns.map((opt, i) => (
-                                        <option key={opt} value={opt}>
-                                            {opt}
-                                        </option>
-                                    ))}
+                        <label>Select Same Column in <strong>{projectData.link_project}</strong></label>
+                        <div className="input-group new_field_fields">
+                            <select className="form-control new_field" name="field2" onChange={(e) => handleChange(e, rowIndex)}>
+                                <option>--select a column--</option>
+                                {Columns && Columns.length && Columns.map((opt, i) => (
+                                    <option key={opt} value={opt}>
+                                        {opt}
+                                    </option>
+                                ))}
 
-                                </select>
+                            </select>
 
-                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div className="col-sm-3">
+                <div className="col-sm-3">
                     <div className="form-group">
-                            <label>Compare as </label>
-                            <div className="input-group new_field_fields">
-                                <select className="form-control new_field" name="type" onChange={(e) => handleChange(e, rowIndex)}>
-                                    <option>--select a column--</option>
-                                    <option value="Exact">Exact Match</option>
-                                    <option value="String">String</option>
+                        <label>Compare as </label>
+                        <div className="input-group new_field_fields">
+                            <select className="form-control new_field" name="type" onChange={(e) => handleChange(e, rowIndex)}>
+                                <option>--select a column--</option>
+                                <option value="Exact">Exact Match</option>
+                                <option value="String">String</option>
 
-                                </select>
+                            </select>
 
-                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-sm-2">
+                    <div className="form-group">
+                        <div className="input-group new_field_fields">
+                            {
+                                rowIndex > 0 && (
+                                    <button className="btn btn-danger" id={rowIndex} onClick={(e) => handleDelete(e)}>
+                                        <BsFillTrashFill />
+
+                                    </button>
+                                )
+                            }
                         </div>
                     </div>
 
-                </div>}
+                </div>
+
+            </div>}
         </div>
     )
 

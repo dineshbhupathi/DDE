@@ -73,23 +73,26 @@ async def upload(project_name: str = Form(...), description: str = Form(...), up
     file_path = os.path.join(csv_path, csv_name)
     with open(file_path, mode='wb+') as f:
         f.write(uploaded_file.file.read())
+    read_file = pd.read_csv(file_path)
+    if "Id" in read_file.columns:
+        project = schemas.Project(
+            project_name=project_name,
+            description=description,
+            file=csv_name,
+            data_check=data_check,
+            link_project=link_project
+        )
+        if link_project != "0":
+            session = Session(bind=database.engine, expire_on_commit=False)
+            pr = session.query(models.Project).get(link_project)
+            if pr:
+                pr.data_check = "dedupe_data"
+                session.commit()
+            session.close()
 
-    project = schemas.Project(
-        project_name=project_name,
-        description=description,
-        file=csv_name,
-        data_check=data_check,
-        link_project=link_project
-    )
-    if link_project != "0":
-        session = Session(bind=database.engine, expire_on_commit=False)
-        pr = session.query(models.Project).get(link_project)
-        if pr:
-            pr.data_check = "dedupe_data"
-            session.commit()
-        session.close()
-
-    return crud.create_project(db=db, project=project)
+        return crud.create_project(db=db, project=project)
+    else:
+        raise HTTPException(status_code=404, detail='Id no Found')
 
 
 @app.get('/v1/projects', response_model=List[schemas.ProjectsList])
@@ -487,6 +490,17 @@ async def delete_project_file(file_id: int, db: Session = Depends(get_db)):
     db.delete(file)
     db.commit()
     return {"ok": True}
+
+
+# search func
+def search(query, db):
+    project = models.Project
+    search = db.query(project).filter(project.project_name.contains(query))
+    return search
+@app.get('/v1/search/')
+async def search_project(query: Union[str, None] = None,db: Session = Depends(get_db)):
+    s = search(query,db=db)
+    return s
 
 
 if __name__ == '__main__':
