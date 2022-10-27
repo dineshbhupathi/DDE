@@ -19,6 +19,7 @@ import MissingValues from './components/pages/predictMissingValues'
 import DetectAnomalies from './components/pages/detectAnomalies'
 import MatchingEngineDefineColumns from './components/pages/matchingEngineDefineColumns';
 import ProjectDetailsPage from './components/pages/projectDetails';
+import ProjectFilesDefineColumns from './components/dataprocessing/projectFilesComponents/defineProjectFilesColumns'
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Route exact path='/detect-anomalies' element={<DetectAnomalies/>}/>
         <Route exact path='/predict-missing-values' element={<MissingValues/>}/>
         <Route exact path='/data-matching-engine-define-columns' element={<MatchingEngineDefineColumns/>}/>
+        <Route exact path='/define-fields/file/:id' element={<ProjectFilesDefineColumns/>}/>
       </Routes>
      </div>
      </BrowserRouter>

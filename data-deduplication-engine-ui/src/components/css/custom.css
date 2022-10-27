@@ -828,12 +828,12 @@ a.card-content:link, a.card-content:hover, a.card-content:active, a.card-content
 /* search button */
 .search{
   position: relative;  
+  
   }
 
   .search input{
-
    height: 35px;
-   text-indent: 25px;
+
   }
 
 
@@ -861,4 +861,8 @@ a.card-content:link, a.card-content:hover, a.card-content:active, a.card-content
    width: 110px;
    background: #002c5f;
 
+  }
+
+  .search .fa-search{
+    position: initial;
   }

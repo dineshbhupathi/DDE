@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import statelogo from '../static/images/logo.png';
 import { useActionData } from "react-router-dom";
-import { read_csv_api, projet_data_check_api } from '../constants/endpoints'
+import { read_csv_file_api, projet_data_check_api } from '../../constants/endpoints'
 import { BsFillTrashFill } from "react-icons/bs";
 
-export default function FieldComponent(props) {
+export default function ProjectFileFieldComponent(props) {
     const [Columns, fetchColumns] = useState([])
     const [projectData, fetchProjetData] = useState([])
     const [isCompareData, setIsCompareData] = useState(false)
@@ -13,10 +12,11 @@ export default function FieldComponent(props) {
     const {handleChange,rowIndex,  handleDelete } = props
 
     const url_id = window.location.pathname.split("/")
-    const project_id = url_id[2]
+    const project_id = url_id[3]
 
     const getData = () => {
-        fetch(read_csv_api + project_id).then((res) => res.json()).then((res) => {
+        fetch(read_csv_file_api + project_id).then((res) => res.json()).then((res) => {
+            console.log(res)
             fetchColumns(res.columns)
             fetchChildColumns(res.child_columns)
             fetchProjetData(res.project)
@@ -42,7 +42,7 @@ export default function FieldComponent(props) {
                 <div className="row">
                     <div className="col-sm-4">
                         <div className="form-group">
-                            <label>Column in <strong>{projectData.project_name}</strong></label>
+                            <label>Column in <strong>{projectData.file_name}</strong></label>
                             <div className="input-group new_field_fields">
                                 <select className="form-control new_field" name="field" onChange={(e) => handleChange(e, rowIndex)}>
                                     <option>--select a column--</option>

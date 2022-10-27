@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import statelogo from '../static/images/logo.png';
-import LoadingSpinner from '../common/loadingSpinner';
-import { read_csv_api, projet_data_check_api, active_training_api, active_training_link_api } from '../constants/endpoints'
-import '../css/bootstrap-nav-wizard.css';
-import '../css/bootstrap.simplex.min.css';
-import '../css/custom.css';
-import '../css/dataTables.bootstrap.css';
-import '../css/select2.min.css';
-import Footer from "../common/footer";
-import Header from "../common/header";
-import DefaultError from "../ErrorPages/Error";
+import LoadingSpinner from '../../common/loadingSpinner';
+import { read_csv_file_api, projet_data_check_api, project_file_active_training_api, active_training_link_api } from '../../constants/endpoints'
+import '../../css/bootstrap-nav-wizard.css';
+import '../../css/bootstrap.simplex.min.css';
+import '../../css/custom.css';
+import '../../css/dataTables.bootstrap.css';
+import '../../css/select2.min.css';
+import Footer from "../../common/footer";
+import Header from "../../common/header";
+import DefaultError from "../../ErrorPages/Error";
 // import Snackbar from '@mui/material';
 // import MuiAllert from '@mui/material';
 
 // const Alert= React.forwardRef(function Alert(props, ref) {
 //     return <MuiAllert elevation={6} ref={ref} variant="filled" {...props} />;
 // });
-export default function TrainModel(props) {
+export default function ProjectFileTrainModel(props) {
     const [isOpenError, setIsOpenError] = useState(false)
     const { data } = props
 
@@ -103,7 +102,7 @@ export default function TrainModel(props) {
     const handleSubmit = (event) => {
         event.preventDefault();
         const url_id = window.location.pathname.split('/')
-        const project_id = url_id[2]
+        const project_id = url_id[3]
         let projectData = { "project": { "id": project_id } }
         const excludedCoumnsData = finalSelectedData.filter((item, index) => index !== 0)
 
@@ -120,13 +119,13 @@ export default function TrainModel(props) {
         setIsLoading(false)
         if (!isCompareData) {
             axios.post(
-                active_training_api,
+                project_file_active_training_api,
                 processData
             )
                 .then(res => {
                     setIsLoading(true)
                     console.log('Success' + res.data);
-                    window.location.pathname = '/identify-duplicates'
+                    window.location.pathname = '/'
                 })
                 .catch(err => {
                     setIsOpenError(true)
@@ -172,9 +171,9 @@ export default function TrainModel(props) {
     console.log(isOpenError, 'error')
 
     const url_id = window.location.pathname.split("/")
-    const project_id = url_id[2]
+    const project_id = url_id[3]
     const getData = () => {
-        fetch(read_csv_api + project_id)
+        fetch(read_csv_file_api + project_id)
             .then((res) => res.json())
             .then((res) => {
                 fetchProjectData(res.project)
@@ -218,7 +217,7 @@ export default function TrainModel(props) {
                             <div>
                                 <div className="col-md-12">
                                     <p>
-                                        <i className='fa fa-fw fa-folder-open'></i> {projectData.project_name} &mdash; {projectData.project_name}
+                                        <i className='fa fa-fw fa-folder-open'></i> {projectData.file_name}
                                         {/* <span className='pull-right'>
                                     <a><i className="fa fa-gears"></i>settings</a>
                                 </span> */}

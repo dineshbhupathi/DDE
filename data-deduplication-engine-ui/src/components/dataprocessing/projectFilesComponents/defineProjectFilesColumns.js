@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import statelogo from '../static/images/logo.png';
-import FieldComponent from "./fieldcomponent";
+import ProjectFileFieldComponent from "./projectFilesFieldComponent";
 import { useNavigate } from "react-router-dom";
-import { active_learning_link_api, active_learning_api, read_csv_api } from '../constants/endpoints'
-import TrainModel from "./train-model";
-import Footer from "../common/footer";
-import Header from "../common/header";
+import { active_learning_link_api, project_file_active_learning_api, read_csv_file_api } from '../../constants/endpoints'
+import ProjectFileTrainModel from "./projectTrainModel";
+import Footer from "../../common/footer";
+import Header from "../../common/header";
 import { Snackbar } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import 'font-awesome/css/font-awesome.min.css';
 
-export default function DefineColumns() {
+export default function ProjectFilesDefineColumns() {
     let [formRows, setFormRows] = useState({
         check_columns: [
             { "field": "", "type": "", "has missing": false }
@@ -31,7 +30,7 @@ export default function DefineColumns() {
 
     const handleNextSubmit = (e) => {
         const url_id = window.location.pathname.split("/")
-        const project_id = url_id[2]
+        const project_id = url_id[3]
         e.preventDefault()
         let updateFormRows = { ...formRows, project: { "id": project_id } }
         console.log(updateFormRows)
@@ -55,7 +54,7 @@ export default function DefineColumns() {
         }
         else {
             axios.post(
-                active_learning_api,
+                project_file_active_learning_api,
                 updateFormRows,
                 {
                     headers: {
@@ -104,10 +103,10 @@ export default function DefineColumns() {
     }
 
     const url_id = window.location.pathname.split("/")
-    const project_id = url_id[2]
+    const project_id = url_id[3]
 
     const getData = () => {
-        fetch(read_csv_api + project_id).then((res) => res.json()).then((res) => {
+        fetch(read_csv_file_api + project_id).then((res) => res.json()).then((res) => {
             fetchProjectData(res.project)
         })
     }
@@ -170,7 +169,7 @@ export default function DefineColumns() {
                                 <div id="field_wrapper">
                                     {
                                         formRows.check_columns.map((elementInArray, index) => (
-                                            <FieldComponent key={index} rowIndex={index} handleChange={handleFormData} handleDelete={handleDeleteRow} />
+                                            <ProjectFileFieldComponent key={index} rowIndex={index} handleChange={handleFormData} handleDelete={handleDeleteRow} />
                                         ))
                                     }
                                 </div>
@@ -189,7 +188,7 @@ export default function DefineColumns() {
                     <Footer />
                     </div></React.Fragment> :
                 <div>
-                    <TrainModel data={activeData} />
+                    <ProjectFileTrainModel data={activeData} />
                 </div>
             }
             {

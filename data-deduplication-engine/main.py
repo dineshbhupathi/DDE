@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import models, database, schemas, crud, csv_processing, data_analytics
 from starlette.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from starlette.responses import FileResponse
 # Rule Engine Dependencies
 import rule_engine
@@ -73,7 +74,7 @@ async def upload(project_name: str = Form(...), description: str = Form(...), up
     file_path = os.path.join(csv_path, csv_name)
     with open(file_path, mode='wb+') as f:
         f.write(uploaded_file.file.read())
-    read_file = pd.read_csv(file_path)
+    read_file = pd.read_csv(file_path,encoding='latin1',engine='python',)
     if "Id" in read_file.columns:
         project = schemas.Project(
             project_name=project_name,
@@ -95,33 +96,59 @@ async def upload(project_name: str = Form(...), description: str = Form(...), up
         raise HTTPException(status_code=404, detail='Id no Found')
 
 
-@app.get('/v1/projects', response_model=List[schemas.ProjectsList])
-async def show_projects(db: Session = Depends(get_db)):
-    projects = db.query(models.Project).all()
-    return projects
+@app.get('/v1/projects/')
+async def show_projects(query: Union[str, None] = None,db: Session = Depends(get_db)):
+    if query:
+        sql_query = db.execute(
+            f'''
+                           SELECT * FROM Project
+                            WHERE project_name LIKE '%{query}%'
+                        '''
+        )
+        lst = []
+        for i in sql_query:
+            lst.append(i)
+        return lst
+    else:
+        projects = db.query(models.Project).all()
+        return projects
 
 
 @app.get('/v1/read_csv/{project_id}')
 async def read_csv(project_id, db: Session = Depends(get_db)):
     project = db.query(models.Project).get(project_id)
-
-    if project.link_project != "0":
-        linked_project_id = project.link_project + "_" + str(project_id)
-        csv_value = csv_processing.get_data(linked_project_id)
-        column_names = csv_processing.column_names(project.link_project)
-        column_List = list(column_names.keys())
-    else:
-        csv_value = csv_processing.get_data(project_id)
-        column_names = csv_processing.column_names(project_id)
-        column_List = list(column_names.keys())
-
-    child_project = db.query(models.Project).all()
     child_project_columns_lis = []
-    for i in child_project:
-        if str(i.id) == project_id and str(i.link_project) != "0":
-            link_id = str(i.link_project) + "_" + str(i.id)
-            child_columns = csv_processing.column_names(link_id)
+    if not project:
+        project = db.query(models.ProjectFiles).get(project_id)
+        linked_project_id = str(project.project) + "_" + str(project_id)
+        csv_value = csv_processing.get_data(project.project)
+        column_names = csv_processing.column_names(project.project)
+        column_List = list(column_names.keys())
+    elif project:
+        if project.link_project != "0":
+            linked_project_id = project.link_project + "_" + str(project_id)
+            csv_value = csv_processing.get_data(linked_project_id)
+            column_names = csv_processing.column_names(project.link_project)
+            column_List = list(column_names.keys())
+        else:
+            csv_value = csv_processing.get_data(project_id)
+            column_names = csv_processing.column_names(project_id)
+            column_List = list(column_names.keys())
+        child_project = db.query(models.Project).all()
+        for i in child_project:
+            if str(i.id) == project_id and str(i.link_project) != "0":
+                link_id = str(i.link_project) + "_" + str(i.id)
+                child_columns = csv_processing.column_names(link_id)
+                child_project_columns_lis.append(list(child_columns.keys()))
+
+    project_files = db.query(models.ProjectFiles).all()
+    for i in project_files:
+        if str(i.id) == project_id:
+            link_id = str(i.project) + "_" + str(i.id)
+            child_columns = csv_processing.file_column_names(link_id)
             child_project_columns_lis.append(list(child_columns.keys()))
+
+
 
     # with open("json_dir/input.json")
 
@@ -190,11 +217,14 @@ async def file_download(
 async def projectCheck(project_id, db: Session = Depends(get_db)):
     project = db.query(models.Project).get(project_id)
     res_dic = {}
-
-    if project.link_project != "0":
-        res_dic['is_link'] = "true"
+    if project:
+        if project.link_project != "0":
+            res_dic['is_link'] = "true"
+        else:
+            res_dic['is_link'] = "false"
     else:
-        res_dic['is_link'] = "false"
+        res_dic['is_link'] = "true"
+
 
     return res_dic
 
@@ -448,13 +478,13 @@ async def add_existing_training(
     res = csv_processing.existing_project_training(payload)
     return {"res": res}
 
-
+import uuid
 @app.post('/v1/upload_file')
 async def upload(file_name: str = Form(...), project: int = Form(...), uploaded_file: UploadFile = File(...),
                  db: Session = Depends(get_db)):
     projects = db.query(models.ProjectFiles).all()
     if projects:
-        last_project_id = projects[-1].id + 1
+        last_project_id = projects[-1].id
     else:
         last_project_id = 1
     csv_name = 'project_file_' + str(project) + "_" + str(last_project_id) + ".csv"
@@ -495,12 +525,76 @@ async def delete_project_file(file_id: int, db: Session = Depends(get_db)):
 # search func
 def search(query, db):
     project = models.Project
+    print(project)
     search = db.query(project).filter(project.project_name.contains(query))
     return search
+
+
 @app.get('/v1/search/')
-async def search_project(query: Union[str, None] = None,db: Session = Depends(get_db)):
-    s = search(query,db=db)
-    return s
+async def search_project(query: Union[str, None] = None, db: Session = Depends(get_db)):
+    sql_query = db.execute(
+        f'''
+                   SELECT * FROM Project
+                    WHERE project_name LIKE '%{query}%'
+                '''
+    )
+    lst = []
+    for i in sql_query:
+        lst.append(i)
+    return lst
+
+
+'''
+    project file API's Start
+'''
+
+
+@app.get('/v1/read_csv_file/{project_id}')
+async def read_csv_file(project_id, db: Session = Depends(get_db)):
+    project = db.query(models.ProjectFiles).get(project_id)
+    child_project_columns_lis = []
+    link_id = str(project.project) + "_" + str(project.id)
+    csv_value = csv_processing.get_projet_file_data(link_id)
+    column_names = csv_processing.file_column_names(link_id)
+    column_List = list(column_names.keys())
+    return {'message': 'Data Reading Successful', 'columns': column_List, 'project': project}
+
+
+@app.post('/v1/project_file_active_learning')
+async def active_learning(
+        payload: dict = Body(...)
+):
+    project = payload['project']
+    field_values = payload['check_columns']
+    active_learning_response = csv_processing.project_active_learning(field_values, project)
+    return active_learning_response
+
+
+@app.post('/v1/project_file_active_training')
+async def csv_active_training(
+        payload: dict = Body(...)
+):
+    project = payload.get('data')[-1]
+    project_data = project.get('project')
+    del payload['data'][-1]['project']
+    data = payload
+    training_response = csv_processing.project_active_training(data, project_data)
+    return training_response
+
+
+@app.post('/v1/project_file_download')
+async def project_file_download(
+        payload: dict = Body(...),
+        db: Session = Depends(get_db)
+):
+    id = payload.get('id')
+    project = db.query(models.ProjectFiles).get(id)
+    if project:
+        file_name = 'output_project_file_' + str(id) + '.csv'
+        file_path = os.path.join(os.getcwd(), "output", file_name)
+
+    return FileResponse(path=file_path, media_type="application/octet-stream", filename=file_name)
+
 
 
 if __name__ == '__main__':

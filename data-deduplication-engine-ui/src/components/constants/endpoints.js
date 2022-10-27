@@ -16,8 +16,10 @@ export const upload_project_file_api = BASE_URL+"v1/upload_file/"
 export const get_project_files_api = BASE_URL+"v1/project_files"
 export const delete_project_file_api = BASE_URL+"v1/delete_project_file/"
 
-
-
+export const read_csv_file_api = BASE_URL+"v1/read_csv_file/"
+export const project_file_active_learning_api = BASE_URL+"v1/project_file_active_learning"
+export const project_file_active_training_api = BASE_URL+"v1/project_file_active_training"
+export const project_file_download_api = BASE_URL+"v1/project_file_download/"
 // data analytics endpints
 export const data_analytics_projects_api = BASE_URL+'v1/data_analytics_projects'
 export const data_analytics_report_api = BASE_URL+'v1/data_analytics_report'

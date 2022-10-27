@@ -6,7 +6,11 @@ import { projects_api, file_download, delete_project_api, trained_data_api, acti
 import { BsFillCloudDownloadFill, BsUpload, BsList, BsPencilSquare, BsFillTrashFill } from "react-icons/bs";
 import Footer from "../common/footer";
 import Header from "../common/header";
+import 'font-awesome/css/font-awesome.min.css';
 import LoadingSpinner from "../common/loadingSpinner";
+import Moment from 'moment';
+
+
 
 export default function DatasetsProcess() {
     const [projectData, setProjectData] = useState([])
@@ -16,7 +20,12 @@ export default function DatasetsProcess() {
     const navigate = useNavigate();
 
     const getProjectData = () => {
-        fetch(projects_api).then((res) => res.json()).then((res) => {
+        let search = document.getElementById('search_input')
+        // console.log(search.value)
+        // if (search==null){
+        //     search = ''    
+        // }
+        fetch(projects_api + `?query=${search.value}`).then((res) => res.json()).then((res) => {
             setProjectData(res)
             let data = res.filter(
                 (r) => r.data_check == 'compare_data'
@@ -72,7 +81,30 @@ export default function DatasetsProcess() {
             }
         })
     }
-
+    const handleSearch = (e) =>{
+        getProjectData()
+    }
+    const searhTable = () => {
+        var input, filter, found, table, tr, td, i, j;
+        input = document.getElementById("search_input");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("project_table");
+        tr = table.getElementsByTagName("tr");
+        for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td");
+            for (j = 0; j < td.length; j++) {
+                if (td[j].innerHTML.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                }
+            }
+            if (found) {
+                tr[i].style.display = "";
+                found = false;
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
     useEffect(() => {
         getProjectData()
     }, [])
@@ -105,13 +137,23 @@ export default function DatasetsProcess() {
                         <div>
                             <label className="functionality-title">Identify Duplicates</label>
                         </div>
-                        <div class="search">
-                            <i class="fa fa-search"></i>
-                            <input type="text" class="form-control" placeholder="Search Projects" />
-                            <button class="btn btn-primary">Search</button>
-                        </div>       
-                        <br/>
-                                 <div className="flex space-between">
+                        {/* <div class="search">
+                            <input type="text" class="form-control" id="search_input" placeholder="Search Projects" />
+                            <button class="btn btn-primary" onClick={()=>getProjectData()}><i class="fa fa-search"></i></button>
+                        </div> */}
+                        <div class="row">
+                        <div class="col-lg-6"></div>
+                            <div class="col-lg-6">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="search_input" onChange={(e)=>handleSearch(e)} placeholder="Search for..." />
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" type="button" onClick={()=>getProjectData()}><i class="fa fa-search"></i></button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <br />
+                        <div className="flex space-between">
                             <div><h3><BsList /> Projects</h3>
 
                             </div>
@@ -119,7 +161,7 @@ export default function DatasetsProcess() {
 
                         </div>
                         <div className="mt-9">
-                            <table className="dataset-process-table width-100">
+                            <table id="project_table" className="dataset-process-table width-100">
                                 <thead>
                                     <tr>
                                         <th>
@@ -135,11 +177,11 @@ export default function DatasetsProcess() {
                                 </thead>
                                 <tbody>
                                     {
-                                        projectData && projectData.length && projectData.map((item) => (
+                                        projectData && projectData.length>0 && projectData.map((item) => (
                                             <tr key={item.id}>
                                                 <td className="width-40"><a href={`/project-details-page/${item.id}`}>{item.project_name}</a></td>
                                                 <td className="width-30">{item.description}</td>
-                                                <td className="width-20">{item.updated_at}</td>
+                                                <td className="width-20">{Moment(item.updated_at).format('YYYY-MM-DD')}</td>
                                                 {/* <td className="width-10" onClick={() => onClickEdit(item)}><button className="button-bor"><a className="btn btn-warning">Re-Train Dataset &nbsp;<BsPencilSquare /></a></button></td>
                                         <td className="width-10" onClick={() => onClickDownload(item)}><button className="btn btn-info"><a className="download-btn">Download</a>&nbsp;<BsFillCloudDownloadFill /></button></td>
                                         <td className="width-5" onClick={() => onClickDelete(item)}><button type="button" className="btn btn-danger delete-btn"><a className="download-btn"><BsFillTrashFill /></a></button></td> */}
@@ -147,6 +189,11 @@ export default function DatasetsProcess() {
                                             </tr>
                                         ))
                                     }
+                                    {!projectData.length>0 &&(
+                                     <tr>
+                                        <td></td>
+                                        <td>No Data</td></tr>)
+                                     }
                                 </tbody>
                             </table>
 

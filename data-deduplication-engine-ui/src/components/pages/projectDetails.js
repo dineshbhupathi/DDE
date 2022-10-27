@@ -5,7 +5,7 @@ import Footer from "../common/footer";
 import Header from "../common/header";
 import LoadingSpinner from "../common/loadingSpinner";
 import { BsFillCloudDownloadFill, BsUpload, BsList, BsPencilSquare, BsFillTrashFill } from "react-icons/bs";
-import { projects_api, get_project_files_api, file_download, delete_project_api, trained_data_api, active_learning_api, existing_project_training_data_api, delete_project_file_api } from '../constants/endpoints'
+import { projects_api, get_project_files_api, file_download, delete_project_api, trained_data_api, active_learning_api, existing_project_training_data_api, delete_project_file_api, project_file_download_api } from '../constants/endpoints'
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Dialog from '@mui/material/Dialog';
@@ -17,6 +17,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { upload_project_file_api } from '../constants/endpoints'
 import DefaultError from "../ErrorPages/Error";
+import Moment from 'moment';
+
 
 export default function ProjectDetailsPage() {
     const [projectData, setProjectData] = useState([])
@@ -25,10 +27,10 @@ export default function ProjectDetailsPage() {
     const [showDialogForm, setShowDialogForm] = useState(false)
     const [showDialogSuccess, setShowDialogSuccess] = useState(false)
     const [open, setOpen] = useState(true)
-    const [payload, setPayload] = useState({"link_project":''})
-    const [isChecked, setIsChecked] = useState(false)
+    const [payload, setPayload] = useState({ "link_project": '' })
+    const [isChecked, setIsChecked] = useState(true)
     const [isLinkChecked, setIsLinkChecked] = useState(false)
-    const [isError ,setIsError] = useState(false)
+    const [isError, setIsError] = useState(false)
     const theme = useTheme();
     const [loading, setLoading] = useState(false)
     const [isButtonDisable, setIsButtonDisable] = useState(true)
@@ -39,6 +41,7 @@ export default function ProjectDetailsPage() {
     const project_id = url_id[2]
     const getProjectData = () => {
         fetch(projects_api).then((res) => res.json()).then((res) => {
+            console.log(res)
             let project = res.map(pr => {
                 if (pr.id == project_id) {
                     return pr
@@ -83,21 +86,24 @@ export default function ProjectDetailsPage() {
     const handleFileChange = (e) => {
         setIsButtonDisable(false)
         setPayload({ "file_name": e.target.files[0].name, "project": project_id, "uploaded_file": e.target.files[0] })
-        console.log(payload)
-
-
     }
     const handleSubmit = () => {
-        console.log(payload)
         setIsButtonDisable(true)
         setLoading(true)
-
-        if (isLinkChecked) { 
+        document.getElementById("upload_file_form").reset();
+        if (isLinkChecked) {
             axios.post(
-
-            ).then(res=>{
+                upload_project_file_api,
+                payload,
+                {
+                    headers: {
+                        "Content-type": "multipart/form-data",
+                    },
+                }
+            ).then(res => {
                 console.log(res)
-            }).catch(err=>{
+                window.location.pathname = `/define-fields/${res.data.id}`
+            }).catch(err => {
                 setIsError(true)
             })
         }
@@ -111,9 +117,9 @@ export default function ProjectDetailsPage() {
                     },
                 }
             ).then(res => {
-               
+
                 if (isChecked) {
-                    let payload = { "project_id": project_id, "project_setting_file": project_id, "is_file": project_id.toString() + '_' + res.data.id.toString() }
+                    let payload = { "project_id": project_id, "project_setting_file": project_id, "is_project_file": res.data.id }
                     axios.post(
                         existing_project_training_data_api,
                         payload
@@ -121,11 +127,16 @@ export default function ProjectDetailsPage() {
                         setShowDialogForm(false)
                         setShowDialogSuccess(true)
                         console.log(res)
-                    }).catch(err=>{
+                    }).catch(err => {
                         setErrorMessage('Error... Caused by training file')
                         setIsError(true)
                         setShowDialogForm(false)
                     })
+
+                }
+                else {
+                    window.location.pathname = `/define-fields/file/${res.data.id}`
+                    setShowDialogForm(false)
 
                 }
             }).catch(err => {
@@ -183,7 +194,7 @@ export default function ProjectDetailsPage() {
         window.location.pathname = `/project-details-page/${project_id}`
     }
     const handleChange = (e) => {
-        payload["link_project"]= e.target.value
+        payload["link_project"] = e.target.value
 
     }
     const onClickEdit = (e) => {
@@ -210,6 +221,20 @@ export default function ProjectDetailsPage() {
             else {
                 window.location.pathname = `/define-fields/${e.id}`
             }
+        })
+    }
+    const onClickEditFile = (e) => {
+        window.location.pathname = `/define-fields/file/${e.id}`
+    }
+    const onClickDownloadFile = (e) => {
+        let payload = { "id": e.id }
+        axios.post(
+            project_file_download_api,
+            payload
+        ).then(res => {
+            FileDownload(res.data, e.file_name + ".csv")
+        }).catch(err => {
+            console.log(err)
         })
     }
     return (
@@ -248,33 +273,34 @@ export default function ProjectDetailsPage() {
                                         <h4>
                                             Upload File
                                         </h4>
-                                        <input
+                                        <form id="upload_file_form"> <input
                                             type="file"
                                             onChange={handleFileChange}
                                         />
-                                        <div className="radio">
-                                            <input type="checkbox" checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />
+                                            <div className="radio">
+                                                <input type="checkbox" checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />
 
-                                            &nbsp; Want to use existing training
+                                                &nbsp; Want to use existing training
 
-                                        </div>
-                                        <div className="radio">
-                                            <input type="checkbox" checked={isLinkChecked} onChange={(e) => setIsLinkChecked(e.target.checked)} />
-                                            &nbsp; Record Linkage
-                                            {isLinkChecked && (
-                                                <select id="project-list" className="form-control" name='link_project' style={{ width: "100%" }} onChange={(e) => handleChange(e)}>
-                                                    <option>--select a project to be linked--</option>
+                                            </div>
+                                            <div className="radio">
+                                                <input type="checkbox" checked={isLinkChecked} onChange={(e) => setIsLinkChecked(e.target.checked)} />
+                                                &nbsp; Record Linkage
+                                                {isLinkChecked && (
+                                                    <select id="project-list" className="form-control" name='link_project' style={{ width: "100%" }} onChange={(e) => handleChange(e)}>
+                                                        <option>--select a project to be linked--</option>
 
-                                                    {
-                                                        projectData.length > 0 && projectData.map((opt, i) => (
-                                                            <option key={opt.id} value={opt.id}>
-                                                                {opt.project_name}
+                                                        {
+                                                            projectData.length > 0 && projectData.map((opt, i) => (
+                                                                <option key={opt.id} value={opt.id}>
+                                                                    {opt.project_name}
 
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>)}
-                                        </div>
+                                                                </option>
+                                                            ))
+                                                        }
+                                                    </select>)}
+                                            </div>
+                                        </form>
                                         {/* <div className="radio">
                                             <input type="checkbox" checked={isChecked} onChange={(e) => setIsChecked(e.target.checked)} />
 
@@ -285,14 +311,14 @@ export default function ProjectDetailsPage() {
                                     <DialogActions>
                                         {/* <button className="btn btn-info" onClick={handleClose}>Cancel</button> */}
                                         <button className="btn btn-info" onClick={handleSubmit} disabled={isButtonDisable}>
-                                        {loading && (
-                                    <i
-                                        className="fa fa-refresh fa-spin"
-                                        style={{ marginRight: "5px" }}
-                                    />
-                                )}
-                                {loading && <span>Loading...</span>}
-                                {!loading && <span>Submit</span>}
+                                            {loading && (
+                                                <i
+                                                    className="fa fa-refresh fa-spin"
+                                                    style={{ marginRight: "5px" }}
+                                                />
+                                            )}
+                                            {loading && <span>Loading...</span>}
+                                            {!loading && <span>Submit</span>}
                                         </button>
                                     </DialogActions>
                                 </Dialog>
@@ -324,7 +350,7 @@ export default function ProjectDetailsPage() {
                                                 <tr key={item.id}>
                                                     <td className="width-40">{item.project_name}</td>
                                                     {/* <td className="width-30">{item.description}</td> */}
-                                                    <td className="width-20">{item.updated_at}</td>
+                                                    <td className="width-20">{Moment(item.updated_at).format('YYYY-MM-DD')}</td>
                                                     <td className="width-10"><button className="button-bor" onClick={() => onClickEdit(item)}><a className="btn btn-warning">Re-Train Dataset &nbsp;<BsPencilSquare /></a></button></td>
                                                     <td className="width-10"><button className="btn btn-info" onClick={() => onClickDownload(item)}><a className="download-btn">Download</a>&nbsp;<BsFillCloudDownloadFill /></button></td>
                                                     <td className="width-5"><button type="button" className="btn btn-danger delete-btn" onClick={() => onClickDelete(item)}><a className="download-btn"><BsFillTrashFill /></a></button></td>
@@ -336,8 +362,8 @@ export default function ProjectDetailsPage() {
                                                 <tr key={item.id}>
                                                     <td className="width-40">{item.file_name}</td>
                                                     <td className="width-30">{item.updated_at}</td>
-                                                    <td className="width-10"></td>
-                                                    <td className="width-10"><button className="btn btn-info" onClick={() => onClickDownload(item)}><a className="download-btn">Download</a>&nbsp;<BsFillCloudDownloadFill /></button></td>
+                                                    <td className="width-10"><button className="button-bor" onClick={() => onClickEditFile(item)}><a className="btn btn-warning">Re-Train Dataset &nbsp;<BsPencilSquare /></a></button></td>
+                                                    <td className="width-10"><button className="btn btn-info" onClick={() => onClickDownloadFile(item)}><a className="download-btn">Download</a>&nbsp;<BsFillCloudDownloadFill /></button></td>
                                                     <td className="width-5"><button type="button" className="btn btn-danger delete-btn" onClick={() => onClickDelete(item)}><a className="download-btn"><BsFillTrashFill /></a></button></td>
 
                                                 </tr>
@@ -377,7 +403,7 @@ export default function ProjectDetailsPage() {
                 {
                     isError && (
                         <div>
-                            <DefaultError data={errorMessage}/>
+                            <DefaultError data={errorMessage} />
                         </div>
                     )
                 }

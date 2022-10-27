@@ -46,9 +46,45 @@ def get_data(project_id):
             data_d[row_id] = dict(clean_row)
     return data_d
 
+def get_files_data(project_id):
+    csv_name = 'project_file_' + str(project_id) + '.csv'
+    csv_path = 'csv_dir/'
+    data_path = os.path.join(csv_path, csv_name)
+    data_d = {}
+
+    with open(data_path, 'r', encoding='cp1252') as f:
+        # Read the first 3 bytes
+        leading_bytes = f.read(3)
+
+        if (leading_bytes != 'ï»¿'):
+            f.seek(0)  # Not a BOM, reset stream to beginning of file
+        else:
+            pass  # skip BOM
+        reader = csv.DictReader(f, delimiter=',')
+        headers = reader.fieldnames
+        for row in reader:
+            clean_row = [(k, preProcess(v)) for (k, v) in row.items()]
+            row_id = int(row['Id'])
+            data_d[row_id] = dict(clean_row)
+    return data_d
+
 
 def column_names(project_id):
     csv_name = 'input_file_' + str(project_id) + '.csv'
+    csv_path = 'csv_dir/'
+    data_path = os.path.join(csv_path, csv_name)
+    df = pd.read_csv(data_path, sep=',', encoding='cp1252')
+    columns = []
+    columns_datatype = []
+    for column in df.columns:
+        columns.append(column)
+        columns_datatype.append(df[column].dtype.name)
+    comb_lis = zip(columns, columns_datatype)
+    new_dict = dict(comb_lis)
+    return new_dict
+
+def file_column_names(project_id):
+    csv_name = 'project_file_' + str(project_id) + '.csv'
     csv_path = 'csv_dir/'
     data_path = os.path.join(csv_path, csv_name)
     df = pd.read_csv(data_path, sep=',', encoding='utf-8')
@@ -73,54 +109,54 @@ def active_learning(payload, project):
     csv_name = 'input_file_' + str(project_id) + '.csv'
     csv_path = 'csv_dir/'
     input_file = os.path.join(csv_path, csv_name)
-    if os.path.exists(settings_path):
-        print('reading from', settings_path)
-        with open(settings_path, 'rb') as f:
-            deduper = dedupe.StaticDedupe(f)
-    else:
-        payload = payload
-        deduper = dedupe.Dedupe(payload)
-        # deduper.prepare_training(data_d)
-        # if os.path.exists(training_path):
-        #     print('reading labeled examples from ', training_path)
-        #     with open(training_path, 'rb') as f:
-        #         print(training_path)
-        #         deduper.prepare_training(data_d, f)
-        # else:
-        deduper.prepare_training(data_d)
-        res = console_label(deduper, payload)
-        return res
-    clustered_dupes = deduper.partition(data_d, 0.5)
-
-    cluster_membership = {}
-    for cluster_id, (records, scores) in enumerate(clustered_dupes):
-        for record_id, score in zip(records, scores):
-            cluster_membership[record_id] = {
-                "Cluster ID": cluster_id,
-                "confidence_score": score
-            }
-    output_file_path = f'output/output_file_project_{str(project_id)}.csv'
-    with open(output_file_path, 'w') as f_output, open(input_file, encoding='cp1252') as f_input:
-        # Read the first 3 bytes
-        leading_bytes = f_input.read(3)
-
-        if (leading_bytes != 'ï»¿'):
-            f_input.seek(0)  # Not a BOM, reset stream to beginning of file
-        else:
-            pass  # skip BOM
-        reader = csv.DictReader(f_input)
-        fieldnames = ['Cluster ID', 'confidence_score'] + reader.fieldnames
-
-        writer = csv.DictWriter(f_output, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for row in reader:
-            row_id = int(row['Id'])
-            row.update(cluster_membership[row_id])
-            writer.writerow(row)
-
-    return {"message": "done"}
-
+    # if os.path.exists(settings_path):
+    #     print('reading from', settings_path)
+    #     with open(settings_path, 'rb') as f:
+    #         deduper = dedupe.StaticDedupe(f)
+    # else:
+    payload = payload
+    deduper = dedupe.Dedupe(payload)
+    # deduper.prepare_training(data_d)
+    # if os.path.exists(training_path):
+    #     print('reading labeled examples from ', training_path)
+    #     with open(training_path, 'rb') as f:
+    #         print(training_path)
+    #         deduper.prepare_training(data_d, f)
+    # else:
+    deduper.prepare_training(data_d)
+    res = console_label(deduper, payload)
+    return res
+    # clustered_dupes = deduper.partition(data_d, 0.5)
+    #
+    # cluster_membership = {}
+    # for cluster_id, (records, scores) in enumerate(clustered_dupes):
+    #     for record_id, score in zip(records, scores):
+    #         cluster_membership[record_id] = {
+    #             "Cluster ID": cluster_id,
+    #             "confidence_score": score
+    #         }
+    # output_file_path = f'output/output_file_project_{str(project_id)}.csv'
+    # with open(output_file_path, 'w') as f_output, open(input_file, encoding='cp1252') as f_input:
+    #     # Read the first 3 bytes
+    #     leading_bytes = f_input.read(3)
+    #
+    #     if (leading_bytes != 'ï»¿'):
+    #         f_input.seek(0)  # Not a BOM, reset stream to beginning of file
+    #     else:
+    #         pass  # skip BOM
+    #     reader = csv.DictReader(f_input)
+    #     fieldnames = ['Cluster ID', 'confidence_score'] + reader.fieldnames
+    #
+    #     writer = csv.DictWriter(f_output, fieldnames=fieldnames)
+    #     writer.writeheader()
+    #
+    #     for row in reader:
+    #         row_id = int(row['Id'])
+    #         row.update(cluster_membership[row_id])
+    #         writer.writerow(row)
+    #
+    # return {"message": "done"}
+    #
 
 def active_training(data, project_data):
     project_id = project_data.get('id')
@@ -261,6 +297,7 @@ def existing_project_training(payload):
     project_id = payload.get('project_id')
     project_id_setting = payload.get('project_setting_file')
     is_file = payload.get("is_file")
+    is_project_file = payload.get("is_project_file")
     cwd = os.getcwd()
     settings_file = 'project_learned_settings_' + str(project_id_setting)
     settings_path = os.path.join(cwd, 'model_dir', settings_file)
@@ -273,7 +310,14 @@ def existing_project_training(payload):
         training_parameter_file = 'project_learned_settings_' + str(is_file)
         training_parameter_path = os.path.join(cwd, 'model_dir', training_parameter_file)
         output_file_path = f'output/output_file_project_{str(is_file)}.csv'
-
+    elif is_project_file:
+        data_d = get_projet_file_data(is_project_file)
+        training_file = 'csv_training_' + str(is_project_file) + '.json'
+        training_path = os.path.join(cwd, 'model_dir', training_file)
+        csv_name = 'project_file_' + str(is_project_file) + '.csv'
+        training_parameter_file = 'project_learned_settings_' + str(is_project_file)
+        training_parameter_path = os.path.join(cwd, 'model_dir', training_parameter_file)
+        output_file_path = f'output/output_project_file_{str(is_project_file)}.csv'
     else:
         data_d = get_data(project_id)
         settings_file = 'project_learned_settings_' + str(project_id_setting)
@@ -327,3 +371,123 @@ def existing_project_training(payload):
                 row_id = int(row['Id'])
                 row.update(cluster_membership[row_id])
                 writer.writerow(row)
+
+
+'''
+    Project File Active Learning & Training
+'''
+
+
+def project_active_learning(payload, project):
+    project_id = project.get('id')
+    data_d = get_projet_file_data(project_id)
+    cwd = os.getcwd()
+    settings_file = 'project_learned_settings_' + str(project_id)
+    settings_path = os.path.join(cwd, 'model_dir', settings_file)
+    training_file = 'csv_training_' + str(project_id) + '.json'
+    training_path = os.path.join(cwd, 'model_dir', training_file)
+    csv_name = 'project_file_' + str(project_id) + '.csv'
+    csv_path = 'csv_dir/'
+    input_file = os.path.join(csv_path, csv_name)
+    # if os.path.exists(settings_path):
+    #     print('reading from', settings_path)
+    #     with open(settings_path, 'rb') as f:
+    #         deduper = dedupe.StaticDedupe(f)
+    # else:
+    payload = payload
+    deduper = dedupe.Dedupe(payload)
+    # deduper.prepare_training(data_d)
+    # if os.path.exists(training_path):
+    #     print('reading labeled examples from ', training_path)
+    #     with open(training_path, 'rb') as f:
+    #         print(training_path)
+    #         deduper.prepare_training(data_d, f)
+    # else:
+    deduper.prepare_training(data_d)
+    res = console_label(deduper, payload)
+    return res
+    # clustered_dupes = deduper.partition(data_d, 0.5)
+    #
+    # cluster_membership = {}
+    # for cluster_id, (records, scores) in enumerate(clustered_dupes):
+    #     for record_id, score in zip(records, scores):
+    #         cluster_membership[record_id] = {
+    #             "Cluster ID": cluster_id,
+    #             "confidence_score": score
+    #         }
+    # output_file_path = f'output/output_project_file_{str(project_id)}.csv'
+    # with open(output_file_path, 'w') as f_output, open(input_file, encoding='cp1252') as f_input:
+    #     # Read the first 3 bytes
+    #     leading_bytes = f_input.read(3)
+    #
+    #     if (leading_bytes != 'ï»¿'):
+    #         f_input.seek(0)  # Not a BOM, reset stream to beginning of file
+    #     else:
+    #         pass  # skip BOM
+    #     reader = csv.DictReader(f_input)
+    #     fieldnames = ['Cluster ID', 'confidence_score'] + reader.fieldnames
+    #
+    #     writer = csv.DictWriter(f_output, fieldnames=fieldnames)
+    #     writer.writeheader()
+    #
+    #     for row in reader:
+    #         row_id = int(row['Id'])
+    #         row.update(cluster_membership[row_id])
+    #         writer.writerow(row)
+    #
+    # return {"message": "done"}
+
+
+def project_active_training(data, project_data):
+    project_id = project_data.get('id')
+    model_dir = 'model_dir/'
+    field_values = data.get('data')[0].get('columns')
+    cleaned_data = data.get('data')[1:]
+    csv_name = 'project_file_' + str(project_id) + '.csv'
+    csv_path = 'csv_dir/'
+    input_file = os.path.join(csv_path, csv_name)
+    training_file = 'csv_training_' + str(project_id) + '.json'
+    training_parameter_file = 'project_learned_settings_' + str(project_id)
+
+    data_d = get_projet_file_data(project_id)
+    deduper = dedupe.Dedupe(field_values)
+    deduper.prepare_training(data_d)
+    # print(cleaned_data,'cl')
+    active_train(deduper, cleaned_data)
+    deduper.train()
+
+    model_path = os.path.join(model_dir, training_file)
+    model_parameter_path = os.path.join(model_dir, training_parameter_file)
+    with open(model_path, 'w') as tf:
+        deduper.write_training(tf)
+
+    with open(model_parameter_path, 'wb') as sf:
+        deduper.write_settings(sf)
+    clustered_dupes = deduper.partition(data_d, 0.5)
+
+    cluster_membership = {}
+    for cluster_id, (records, scores) in enumerate(clustered_dupes):
+        for record_id, score in zip(records, scores):
+            cluster_membership[record_id] = {
+                "Cluster ID": cluster_id,
+                "confidence_score": score
+            }
+    output_file_path = f'output/output_project_file_{str(project_id)}.csv'
+    with open(output_file_path, 'w') as f_output, open(input_file, encoding='cp1252') as f_input:
+        # Read the first 3 bytes
+        leading_bytes = f_input.read(3)
+
+        if (leading_bytes != 'ï»¿'):
+            f_input.seek(0)  # Not a BOM, reset stream to beginning of file
+        else:
+            pass  # skip BOM
+        reader = csv.DictReader(f_input)
+        fieldnames = ['Cluster ID', 'confidence_score'] + reader.fieldnames
+
+        writer = csv.DictWriter(f_output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for row in reader:
+            row_id = int(row['Id'])
+            row.update(cluster_membership[row_id])
+            writer.writerow(row)
